@@ -99,7 +99,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   double _averageStepCadence = 0.0;
   DateTime? _lastValidStep;
   bool _isInWalkingPattern = false;
-  
+
   // Advanced signal processing variables
   double _accelerationMean = 9.8;
   double _accelerationStd = 1.0;
@@ -107,17 +107,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
   double _walkingConfidence = 0.0;
   final List<double> _stepIntervals = [];
   double _expectedStepInterval = 0.6;
-  
+
   // Multi-dimensional analysis
   final List<List<double>> _accelerationWindow = [];
   static const int _analysisWindowSize = 50; // 1-2 seconds of data
-  
+
   // Advanced pattern recognition
   final List<double> _peakAmplitudes = [];
   final List<double> _valleyAmplitudes = [];
   final List<DateTime> _peakTimestamps = [];
   final List<DateTime> _valleyTimestamps = [];
-  
+
   // Step quality metrics
   double _stepRegularity = 0.0;
   double _stepSymmetry = 0.0;
@@ -964,113 +964,72 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   /// Determine if a step is valid using advanced multi-criteria analysis
-  bool _isValidStep(DateTime stepTime) {
-    // If not calibrated, use relaxed validation
-    if (!_isCalibrated) {
-      return _isValidStepRelaxed(stepTime);
-    }
-
-    // Multi-criteria step validation for maximum accuracy
-    
-    // 1. Time interval validation - prevent rapid false steps
-    if (_lastValidStep != null) {
-      double timeSinceLastStep = stepTime.difference(_lastValidStep!).inMilliseconds / 1000.0;
-      
-      if (timeSinceLastStep < _minStepInterval) {
-        print('Step rejected: Too quick (${timeSinceLastStep.toStringAsFixed(2)}s < ${_minStepInterval.toStringAsFixed(2)}s)');
-        return false;
-      }
-      
-      if (timeSinceLastStep > _maxStepInterval) {
-        print('Step rejected: Too slow (${timeSinceLastStep.toStringAsFixed(2)}s > ${_maxStepInterval.toStringAsFixed(2)}s)');
-        _isInWalkingPattern = false; // Reset walking pattern
-        return false;
-      }
-    }
-
-    // 2. Advanced shaking detection using multi-axis variance analysis
-    if (_isAdvancedShakingDetected()) {
-      print('Step rejected: Advanced shaking pattern detected');
-      return false;
-    }
-
-    // 3. Walking cadence validation with dynamic adjustment
-    if (!_isValidWalkingCadenceAdvanced(stepTime)) {
-      print('Step rejected: Invalid walking cadence pattern');
-      return false;
-    }
-
-    // 4. Step magnitude validation with adaptive thresholds
-    if (!_hasValidStepMagnitudeAdvanced()) {
-      print('Step rejected: Insufficient step magnitude');
-      return false;
-    }
-
-    // 5. Gait pattern consistency check
-    if (!_isConsistentGaitPattern()) {
-      print('Step rejected: Inconsistent gait pattern');
-      return false;
-    }
-
-    // 6. Motion state validation
-    if (!_isValidMotionState()) {
-      print('Step rejected: Invalid motion state');
-      return false;
-    }
-
-    print('Step ACCEPTED: All validation criteria passed');
-    return true;
-  }
 
   /// Advanced shaking detection using multiple signal analysis techniques
   bool _isAdvancedShakingDetected() {
     if (_accelerationBuffer.length < 15) return false;
 
     // Calculate variance over different time windows
-    double shortTermVariance = _calculateVarianceWindow(_accelerationBuffer, 5);  // 0.2 seconds
-    double mediumTermVariance = _calculateVarianceWindow(_accelerationBuffer, 10); // 0.4 seconds
-    double longTermVariance = _calculateVarianceWindow(_accelerationBuffer, 15);  // 0.6 seconds
+    double shortTermVariance = _calculateVarianceWindow(
+      _accelerationBuffer,
+      5,
+    ); // 0.2 seconds
+    double mediumTermVariance = _calculateVarianceWindow(
+      _accelerationBuffer,
+      10,
+    ); // 0.4 seconds
 
     // Shaking typically shows high variance in short and medium terms
-    bool highShortTermVariance = shortTermVariance > _shakingVarianceThreshold * 1.2;
-    bool highMediumTermVariance = mediumTermVariance > _shakingVarianceThreshold * 0.8;
-    
+    bool highShortTermVariance =
+        shortTermVariance > _shakingVarianceThreshold * 1.2;
+    bool highMediumTermVariance =
+        mediumTermVariance > _shakingVarianceThreshold * 0.8;
+
     // Check for rapid direction changes (characteristic of shaking)
     int directionChanges = _countRecentDirectionChanges();
-    bool tooManyDirectionChanges = directionChanges > 8; // More than 8 changes in recent data
+    bool tooManyDirectionChanges =
+        directionChanges > 8; // More than 8 changes in recent data
 
     // Check for excessive acceleration spikes
-    double recentMaxAcceleration = _accelerationBuffer.skip(_accelerationBuffer.length - 10).reduce((a, b) => a > b ? a : b);
-    bool excessiveSpikes = recentMaxAcceleration > _shakingVarianceThreshold * 2;
+    double recentMaxAcceleration = _accelerationBuffer
+        .skip(_accelerationBuffer.length - 10)
+        .reduce((a, b) => a > b ? a : b);
+    bool excessiveSpikes =
+        recentMaxAcceleration > _shakingVarianceThreshold * 2;
 
-    return (highShortTermVariance && highMediumTermVariance) || tooManyDirectionChanges || excessiveSpikes;
+    return (highShortTermVariance && highMediumTermVariance) ||
+        tooManyDirectionChanges ||
+        excessiveSpikes;
   }
 
   /// Calculate variance for a specific window size
   double _calculateVarianceWindow(List<double> data, int windowSize) {
     if (data.length < windowSize) return 0.0;
-    
+
     List<double> window = data.skip(data.length - windowSize).toList();
     double mean = window.reduce((a, b) => a + b) / window.length;
-    double variance = window.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) / window.length;
-    
+    double variance =
+        window.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) /
+        window.length;
+
     return variance;
   }
 
   /// Count direction changes in recent acceleration data
   int _countRecentDirectionChanges() {
     if (_accelerationBuffer.length < 6) return 0;
-    
+
     int changes = 0;
-    List<double> recent = _accelerationBuffer.skip(_accelerationBuffer.length - 6).toList();
-    
+    List<double> recent =
+        _accelerationBuffer.skip(_accelerationBuffer.length - 6).toList();
+
     for (int i = 2; i < recent.length; i++) {
       bool wasIncreasing = recent[i - 1] > recent[i - 2];
       bool isIncreasing = recent[i] > recent[i - 1];
-      
+
       if (wasIncreasing != isIncreasing) changes++;
     }
-    
+
     return changes;
   }
 
@@ -1079,18 +1038,21 @@ class _NavigationScreenState extends State<NavigationScreen> {
     if (_stepTimestamps.length < 3) return true; // Not enough data, allow step
 
     // Get recent steps within last 8 seconds for pattern analysis
-    List<DateTime> recentSteps = _stepTimestamps.where(
-      (timestamp) => stepTime.difference(timestamp).inSeconds < 8
-    ).toList();
-    
+    List<DateTime> recentSteps =
+        _stepTimestamps
+            .where((timestamp) => stepTime.difference(timestamp).inSeconds < 8)
+            .toList();
+
     if (recentSteps.length < 2) return true;
 
     // Calculate instantaneous cadence
-    double totalTime = recentSteps.last.difference(recentSteps.first).inMilliseconds / 1000.0;
+    double totalTime =
+        recentSteps.last.difference(recentSteps.first).inMilliseconds / 1000.0;
     double instantaneousCadence = (recentSteps.length - 1) / totalTime;
 
     // Check if cadence is within calibrated range
-    if (instantaneousCadence < _minWalkingCadence || instantaneousCadence > _maxWalkingCadence) {
+    if (instantaneousCadence < _minWalkingCadence ||
+        instantaneousCadence > _maxWalkingCadence) {
       return false;
     }
 
@@ -1098,13 +1060,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
     if (recentSteps.length >= 4) {
       List<double> intervals = [];
       for (int i = 1; i < recentSteps.length; i++) {
-        intervals.add(recentSteps[i].difference(recentSteps[i - 1]).inMilliseconds / 1000.0);
+        intervals.add(
+          recentSteps[i].difference(recentSteps[i - 1]).inMilliseconds / 1000.0,
+        );
       }
-      
-      double meanInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-      double intervalVariance = intervals.map((interval) => pow(interval - meanInterval, 2)).reduce((a, b) => a + b) / intervals.length;
+
+      double meanInterval =
+          intervals.reduce((a, b) => a + b) / intervals.length;
+      double intervalVariance =
+          intervals
+              .map((interval) => pow(interval - meanInterval, 2))
+              .reduce((a, b) => a + b) /
+          intervals.length;
       double coefficientOfVariation = sqrt(intervalVariance) / meanInterval;
-      
+
       // Reject if steps are too erratic (CV > 0.4 means 40% variation)
       if (coefficientOfVariation > 0.4) {
         return false;
@@ -1119,17 +1088,19 @@ class _NavigationScreenState extends State<NavigationScreen> {
     if (_stepMagnitudes.length < 5) return true; // Not enough data
 
     // Get recent magnitude data
-    List<double> recentMagnitudes = _stepMagnitudes.skip(_stepMagnitudes.length - 5).toList();
-    double averageRecentMagnitude = recentMagnitudes.reduce((a, b) => a + b) / recentMagnitudes.length;
-    
+    List<double> recentMagnitudes =
+        _stepMagnitudes.skip(_stepMagnitudes.length - 5).toList();
+    double averageRecentMagnitude =
+        recentMagnitudes.reduce((a, b) => a + b) / recentMagnitudes.length;
+
     // Dynamic threshold based on recent activity level
     double dynamicThreshold = _stepMagnitudeThreshold;
-    
+
     // Lower threshold if we're in a consistent walking pattern
     if (_isInWalkingPattern && _stepTimestamps.length > 5) {
       dynamicThreshold *= 0.85; // 15% more lenient when walking consistently
     }
-    
+
     // Higher threshold if recent variance suggests irregular motion
     if (_accelerationBuffer.length >= 10) {
       double recentVariance = _calculateVarianceWindow(_accelerationBuffer, 10);
@@ -1143,24 +1114,32 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   /// Check for consistent gait pattern
   bool _isConsistentGaitPattern() {
-    if (_stepTimestamps.length < 4) return true; // Not enough data for pattern analysis
+    if (_stepTimestamps.length < 4)
+      return true; // Not enough data for pattern analysis
 
     // Analyze step interval consistency
     List<double> intervals = [];
     for (int i = 1; i < _stepTimestamps.length; i++) {
-      intervals.add(_stepTimestamps[i].difference(_stepTimestamps[i - 1]).inMilliseconds / 1000.0);
+      intervals.add(
+        _stepTimestamps[i].difference(_stepTimestamps[i - 1]).inMilliseconds /
+            1000.0,
+      );
     }
 
     if (intervals.length < 3) return true;
 
     // Calculate consistency metrics
     double meanInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-    double variance = intervals.map((interval) => pow(interval - meanInterval, 2)).reduce((a, b) => a + b) / intervals.length;
+    double variance =
+        intervals
+            .map((interval) => pow(interval - meanInterval, 2))
+            .reduce((a, b) => a + b) /
+        intervals.length;
     double standardDeviation = sqrt(variance);
-    
+
     // Good gait should have consistent step intervals
     double consistencyRatio = standardDeviation / meanInterval;
-    
+
     // Accept if consistency ratio is reasonable (less than 35% variation)
     return consistencyRatio < 0.35;
   }
@@ -1169,19 +1148,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
   bool _isValidMotionState() {
     // If we detect we're walking, be more lenient
     if (_isWalking) return true;
-    
+
     // If we have established a walking pattern recently, allow steps
     if (_isInWalkingPattern && _stepTimestamps.isNotEmpty) {
       DateTime lastStep = _stepTimestamps.last;
-      double timeSinceLastStep = DateTime.now().difference(lastStep).inMilliseconds / 1000.0;
-      
+      double timeSinceLastStep =
+          DateTime.now().difference(lastStep).inMilliseconds / 1000.0;
+
       // Allow if last step was recent (within 3 seconds)
       if (timeSinceLastStep < 3.0) return true;
     }
-    
+
     // For first few steps when walking state isn't detected yet, be lenient
     if (_stepTimestamps.length < 3) return true;
-    
+
     return false;
   }
 
@@ -1375,7 +1355,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _accelerationX.add(event.x);
     _accelerationY.add(event.y);
     _accelerationZ.add(event.z);
-    
+
     // Maintain buffer size
     if (_accelerationX.length > _analysisWindowSize) {
       _accelerationX.removeAt(0);
@@ -1396,7 +1376,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     // Store acceleration window for pattern analysis
-    _accelerationWindow.add([event.x, event.y, event.z, accelerationMagnitude, filteredMagnitude]);
+    _accelerationWindow.add([
+      event.x,
+      event.y,
+      event.z,
+      accelerationMagnitude,
+      filteredMagnitude,
+    ]);
     if (_accelerationWindow.length > _analysisWindowSize) {
       _accelerationWindow.removeAt(0);
     }
@@ -1431,7 +1417,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Apply low-pass filter to reduce noise in acceleration data
   double _applyLowPassFilter(double currentValue) {
     if (_filteredAcceleration.isEmpty) return currentValue;
-    
+
     double alpha = 0.2; // Low-pass filter coefficient
     double previousFiltered = _filteredAcceleration.last;
     return alpha * currentValue + (1 - alpha) * previousFiltered;
@@ -1440,11 +1426,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Update statistical measures for acceleration data
   void _updateAccelerationStatistics() {
     if (_filteredAcceleration.length < 10) return;
-    
+
     // Calculate running mean and standard deviation
     double sum = _filteredAcceleration.reduce((a, b) => a + b);
     _accelerationMean = sum / _filteredAcceleration.length;
-    
+
     double variance = 0.0;
     for (double value in _filteredAcceleration) {
       variance += pow(value - _accelerationMean, 2);
@@ -1455,22 +1441,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Perform advanced step detection using multiple algorithms
   void _performAdvancedStepDetection(DateTime timestamp, double magnitude) {
     if (_filteredAcceleration.length < 20) return; // Need enough data
-    
+
     // Detect peaks and valleys in the signal
     _detectPeaksAndValleys(timestamp, magnitude);
-    
+
     // Calculate step confidence using multiple criteria
     double stepConfidence = _calculateStepConfidence(timestamp, magnitude);
     _stepConfidenceScores.add(stepConfidence);
     if (_stepConfidenceScores.length > 20) {
       _stepConfidenceScores.removeAt(0);
     }
-    
+
     // Check if this is a valid step using advanced criteria
     if (_isAdvancedValidStep(timestamp, magnitude, stepConfidence)) {
       _recordAdvancedValidStep(timestamp, magnitude, stepConfidence);
     }
-    
+
     // Update walking pattern analysis
     _updateWalkingPatternAnalysis();
   }
@@ -1478,31 +1464,35 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Detect peaks and valleys in acceleration signal
   void _detectPeaksAndValleys(DateTime timestamp, double magnitude) {
     if (_filteredAcceleration.length < 5) return;
-    
+
     int currentIndex = _filteredAcceleration.length - 1;
     if (currentIndex < 2) return;
-    
+
     double current = _filteredAcceleration[currentIndex];
     double previous = _filteredAcceleration[currentIndex - 1];
     double beforePrevious = _filteredAcceleration[currentIndex - 2];
-    
+
     // Peak detection: current value is higher than neighbors
-    if (previous > beforePrevious && previous > current && previous > _accelerationMean + _accelerationStd * 0.5) {
+    if (previous > beforePrevious &&
+        previous > current &&
+        previous > _accelerationMean + _accelerationStd * 0.5) {
       _peakAmplitudes.add(previous);
       _peakTimestamps.add(timestamp);
-      
+
       // Maintain buffer size
       if (_peakAmplitudes.length > 20) {
         _peakAmplitudes.removeAt(0);
         _peakTimestamps.removeAt(0);
       }
     }
-    
+
     // Valley detection: current value is lower than neighbors
-    if (previous < beforePrevious && previous < current && previous < _accelerationMean - _accelerationStd * 0.5) {
+    if (previous < beforePrevious &&
+        previous < current &&
+        previous < _accelerationMean - _accelerationStd * 0.5) {
       _valleyAmplitudes.add(previous);
       _valleyTimestamps.add(timestamp);
-      
+
       // Maintain buffer size
       if (_valleyAmplitudes.length > 20) {
         _valleyAmplitudes.removeAt(0);
@@ -1514,58 +1504,63 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Calculate step confidence score using multiple criteria
   double _calculateStepConfidence(DateTime timestamp, double magnitude) {
     double confidence = 0.0;
-    
+
     // Criterion 1: Magnitude relative to mean (25% weight)
-    double magnitudeScore = (magnitude - _accelerationMean).abs() / (_accelerationStd + 0.1);
+    double magnitudeScore =
+        (magnitude - _accelerationMean).abs() / (_accelerationStd + 0.1);
     confidence += magnitudeScore.clamp(0.0, 1.0) * 0.25;
-    
+
     // Criterion 2: Peak-valley pattern (25% weight)
     double patternScore = _calculatePatternScore();
     confidence += patternScore * 0.25;
-    
+
     // Criterion 3: Temporal consistency (25% weight)
     double temporalScore = _calculateTemporalScore(timestamp);
     confidence += temporalScore * 0.25;
-    
+
     // Criterion 4: Walking state consistency (25% weight)
     double walkingScore = _calculateWalkingStateScore();
     confidence += walkingScore * 0.25;
-    
+
     return confidence.clamp(0.0, 1.0);
   }
 
   /// Calculate pattern score based on peak-valley analysis
   double _calculatePatternScore() {
     if (_peakAmplitudes.length < 2 || _valleyAmplitudes.length < 2) return 0.0;
-    
+
     // Check amplitude consistency
-    double avgPeakAmplitude = _peakAmplitudes.reduce((a, b) => a + b) / _peakAmplitudes.length;
-    double avgValleyAmplitude = _valleyAmplitudes.reduce((a, b) => a + b) / _valleyAmplitudes.length;
+    double avgPeakAmplitude =
+        _peakAmplitudes.reduce((a, b) => a + b) / _peakAmplitudes.length;
+    double avgValleyAmplitude =
+        _valleyAmplitudes.reduce((a, b) => a + b) / _valleyAmplitudes.length;
     double amplitudeDifference = avgPeakAmplitude - avgValleyAmplitude;
-    
+
     // Good step pattern should have clear distinction between peaks and valleys
     if (amplitudeDifference < 0.5) return 0.0;
     if (amplitudeDifference > 5.0) return 0.3; // Too high might be shaking
-    
+
     return (amplitudeDifference / 3.0).clamp(0.0, 1.0);
   }
 
   /// Calculate temporal consistency score
   double _calculateTemporalScore(DateTime currentTime) {
     if (_stepTimestamps.length < 2) return 0.5; // Neutral score for first steps
-    
+
     double avgInterval = _expectedStepInterval;
     if (_stepIntervals.isNotEmpty) {
-      avgInterval = _stepIntervals.reduce((a, b) => a + b) / _stepIntervals.length;
+      avgInterval =
+          _stepIntervals.reduce((a, b) => a + b) / _stepIntervals.length;
     }
-    
+
     DateTime lastStep = _stepTimestamps.last;
-    double currentInterval = currentTime.difference(lastStep).inMilliseconds / 1000.0;
-    
+    double currentInterval =
+        currentTime.difference(lastStep).inMilliseconds / 1000.0;
+
     // Score based on how close the interval is to expected
     double intervalDifference = (currentInterval - avgInterval).abs();
     if (intervalDifference > 1.0) return 0.0; // Too far from expected
-    
+
     return (1.0 - intervalDifference).clamp(0.0, 1.0);
   }
 
@@ -1573,170 +1568,168 @@ class _NavigationScreenState extends State<NavigationScreen> {
   double _calculateWalkingStateScore() {
     // Base score on walking state
     double baseScore = _isWalking ? 0.8 : 0.3;
-    
+
     // Adjust based on consecutive steps
     double consecutiveBonus = (_consecutiveSteps / 10.0).clamp(0.0, 0.2);
-    
+
     // Adjust based on overall walking confidence
-    return (baseScore + consecutiveBonus + _walkingConfidence * 0.1).clamp(0.0, 1.0);
+    return (baseScore + consecutiveBonus + _walkingConfidence * 0.1).clamp(
+      0.0,
+      1.0,
+    );
   }
 
   /// Advanced step validation using multiple criteria and confidence score
-  bool _isAdvancedValidStep(DateTime stepTime, double magnitude, double confidence) {
+  bool _isAdvancedValidStep(
+    DateTime stepTime,
+    double magnitude,
+    double confidence,
+  ) {
     // Primary confidence threshold
     if (confidence < 0.4) return false;
-    
+
     // If not calibrated, use relaxed validation
     if (!_isCalibrated) {
       return _isValidStepRelaxedAdvanced(stepTime, confidence);
     }
-    
+
     // Time interval validation
     if (_lastValidStep != null) {
-      double timeSinceLastStep = stepTime.difference(_lastValidStep!).inMilliseconds / 1000.0;
-      
+      double timeSinceLastStep =
+          stepTime.difference(_lastValidStep!).inMilliseconds / 1000.0;
+
       if (timeSinceLastStep < _minStepInterval) return false;
       if (timeSinceLastStep > _maxStepInterval) {
         _resetWalkingPattern();
         if (timeSinceLastStep > 3.0) return false; // Too long gap
       }
     }
-    
+
     // Advanced shaking detection
     if (_isAdvancedShakingDetected()) return false;
-    
+
     // Walking cadence validation
     if (!_isValidAdvancedWalkingCadence(stepTime)) return false;
-    
+
     // Magnitude validation with adaptive threshold
     if (!_hasValidAdvancedStepMagnitude(magnitude)) return false;
-    
+
     // Gait pattern validation
     if (!_isValidGaitPattern()) return false;
-    
+
     return true;
   }
 
   /// Relaxed validation for uncalibrated devices with confidence scoring
   bool _isValidStepRelaxedAdvanced(DateTime stepTime, double confidence) {
     if (confidence < 0.3) return false;
-    
+
     if (_lastValidStep != null) {
-      double timeSinceLastStep = stepTime.difference(_lastValidStep!).inMilliseconds / 1000.0;
+      double timeSinceLastStep =
+          stepTime.difference(_lastValidStep!).inMilliseconds / 1000.0;
       if (timeSinceLastStep < 0.2) return false;
       if (timeSinceLastStep > 3.0) return false;
     }
-    
+
     // Very basic shaking detection for uncalibrated
     if (_accelerationBuffer.length >= 10) {
       double variance = _calculateVariance(_accelerationBuffer);
       if (variance > 15.0) return false; // Obvious shaking
     }
-    
+
     return true;
   }
 
   /// Advanced shaking detection using multiple signals
-  bool _isAdvancedShakingDetected() {
-    if (_accelerationWindow.length < 20) return false;
-    
-    // Check variance in all three axes
-    double xVariance = _calculateAxisVariance(0);
-    double yVariance = _calculateAxisVariance(1);
-    double zVariance = _calculateAxisVariance(2);
-    
-    // High variance in all axes suggests shaking
-    double totalVariance = xVariance + yVariance + zVariance;
-    if (totalVariance > _shakingVarianceThreshold * 3) return true;
-    
-    // Check frequency of direction changes
-    int directionChanges = _countDirectionChanges();
-    if (directionChanges > 15) return true; // Too many direction changes
-    
-    return false;
-  }
 
   /// Calculate variance for a specific axis
   double _calculateAxisVariance(int axisIndex) {
     if (_accelerationWindow.length < 5) return 0.0;
-    
-    List<double> axisData = _accelerationWindow.map((window) => window[axisIndex]).toList();
+
+    List<double> axisData =
+        _accelerationWindow.map((window) => window[axisIndex]).toList();
     double mean = axisData.reduce((a, b) => a + b) / axisData.length;
-    double variance = axisData.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) / axisData.length;
-    
+    double variance =
+        axisData.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) /
+        axisData.length;
+
     return variance;
   }
 
   /// Count direction changes in acceleration
   int _countDirectionChanges() {
     if (_filteredAcceleration.length < 3) return 0;
-    
+
     int changes = 0;
     for (int i = 2; i < _filteredAcceleration.length; i++) {
       double prev2 = _filteredAcceleration[i - 2];
       double prev1 = _filteredAcceleration[i - 1];
       double current = _filteredAcceleration[i];
-      
+
       bool wasIncreasing = prev1 > prev2;
       bool isIncreasing = current > prev1;
-      
+
       if (wasIncreasing != isIncreasing) changes++;
     }
-    
+
     return changes;
   }
 
   /// Advanced walking cadence validation
   bool _isValidAdvancedWalkingCadence(DateTime stepTime) {
     if (_stepTimestamps.length < 3) return true;
-    
+
     // Calculate recent cadence over multiple steps
-    List<DateTime> recentSteps = _stepTimestamps.where(
-      (timestamp) => stepTime.difference(timestamp).inSeconds < 10
-    ).toList();
-    
+    List<DateTime> recentSteps =
+        _stepTimestamps
+            .where((timestamp) => stepTime.difference(timestamp).inSeconds < 10)
+            .toList();
+
     if (recentSteps.length < 2) return true;
-    
-    double totalTime = recentSteps.last.difference(recentSteps.first).inMilliseconds / 1000.0;
+
+    double totalTime =
+        recentSteps.last.difference(recentSteps.first).inMilliseconds / 1000.0;
     double recentCadence = (recentSteps.length - 1) / totalTime;
-    
+
     // Update expected step interval
     if (recentCadence > 0) {
       _expectedStepInterval = 1.0 / recentCadence;
     }
-    
-    return recentCadence >= _minWalkingCadence && recentCadence <= _maxWalkingCadence;
+
+    return recentCadence >= _minWalkingCadence &&
+        recentCadence <= _maxWalkingCadence;
   }
 
   /// Advanced step magnitude validation with adaptive threshold
   bool _hasValidAdvancedStepMagnitude(double magnitude) {
     if (_filteredAcceleration.length < 10) return true;
-    
+
     // Adaptive threshold based on recent data
     double recentMean = _accelerationMean;
     double dynamicThreshold = _stepMagnitudeThreshold;
-    
+
     // Adjust threshold based on walking confidence
     if (_walkingConfidence > 0.7) {
       dynamicThreshold *= 0.8; // Lower threshold when confident we're walking
     }
-    
-    return magnitude >= dynamicThreshold || magnitude >= recentMean + _accelerationStd;
+
+    return magnitude >= dynamicThreshold ||
+        magnitude >= recentMean + _accelerationStd;
   }
 
   /// Validate gait pattern for step regularity and stability
   bool _isValidGaitPattern() {
     if (_stepIntervals.length < 3) return true; // Not enough data
-    
+
     // Calculate step regularity (consistency of intervals)
     _stepRegularity = _calculateStepRegularity();
-    
+
     // Calculate step symmetry (balance between left and right steps)
     _stepSymmetry = _calculateStepSymmetry();
-    
+
     // Calculate gait stability
     _gaitStability = _calculateGaitStability();
-    
+
     // Accept step if gait metrics are reasonable
     return _stepRegularity > 0.3 && _stepSymmetry > 0.2 && _gaitStability > 0.3;
   }
@@ -1744,11 +1737,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Calculate step regularity based on interval consistency
   double _calculateStepRegularity() {
     if (_stepIntervals.length < 3) return 1.0;
-    
-    double mean = _stepIntervals.reduce((a, b) => a + b) / _stepIntervals.length;
-    double variance = _stepIntervals.map((interval) => pow(interval - mean, 2)).reduce((a, b) => a + b) / _stepIntervals.length;
+
+    double mean =
+        _stepIntervals.reduce((a, b) => a + b) / _stepIntervals.length;
+    double variance =
+        _stepIntervals
+            .map((interval) => pow(interval - mean, 2))
+            .reduce((a, b) => a + b) /
+        _stepIntervals.length;
     double coefficient = sqrt(variance) / mean;
-    
+
     return (1.0 - coefficient).clamp(0.0, 1.0);
   }
 
@@ -1762,43 +1760,63 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Calculate gait stability based on acceleration variance
   double _calculateGaitStability() {
     if (_filteredAcceleration.length < 20) return 1.0;
-    
+
     double variance = _calculateVariance(_filteredAcceleration);
     double stability = 1.0 / (1.0 + variance / 5.0);
-    
+
     return stability.clamp(0.0, 1.0);
   }
 
   /// Record a valid step with advanced metrics
-  void _recordAdvancedValidStep(DateTime stepTime, double magnitude, double confidence) {
+  void _recordAdvancedValidStep(
+    DateTime stepTime,
+    double magnitude,
+    double confidence,
+  ) {
     _lastValidStep = stepTime;
     _stepTimestamps.add(stepTime);
     _stepMagnitudes.add(magnitude);
     _consecutiveSteps++;
-    
+
     // Record step interval
     if (_stepTimestamps.length >= 2) {
-      double interval = stepTime.difference(_stepTimestamps[_stepTimestamps.length - 2]).inMilliseconds / 1000.0;
+      double interval =
+          stepTime
+              .difference(_stepTimestamps[_stepTimestamps.length - 2])
+              .inMilliseconds /
+          1000.0;
       _stepIntervals.add(interval);
       if (_stepIntervals.length > 20) {
         _stepIntervals.removeAt(0);
       }
     }
-    
+
     // Update walking confidence
-    _walkingConfidence = (_walkingConfidence * 0.9 + confidence * 0.1).clamp(0.0, 1.0);
-    
+    _walkingConfidence = (_walkingConfidence * 0.9 + confidence * 0.1).clamp(
+      0.0,
+      1.0,
+    );
+
     // Keep only recent data
     final cutoffTime = stepTime.subtract(Duration(seconds: 30));
     _stepTimestamps.removeWhere((timestamp) => timestamp.isBefore(cutoffTime));
-    _stepMagnitudes.removeWhere((_, index) => index < _stepTimestamps.length);
-    
+
+    // Remove corresponding step magnitudes
+    while (_stepMagnitudes.length > _stepTimestamps.length) {
+      _stepMagnitudes.removeAt(0);
+    }
+
     // Update walking pattern status
-    _isInWalkingPattern = _stepTimestamps.length >= 3 && _walkingConfidence > 0.5;
-    
+    _isInWalkingPattern =
+        _stepTimestamps.length >= 3 && _walkingConfidence > 0.5;
+
     // Calculate average cadence
     if (_stepTimestamps.length >= 2) {
-      double totalTime = _stepTimestamps.last.difference(_stepTimestamps.first).inMilliseconds / 1000.0;
+      double totalTime =
+          _stepTimestamps.last
+              .difference(_stepTimestamps.first)
+              .inMilliseconds /
+          1000.0;
       _averageStepCadence = (_stepTimestamps.length - 1) / totalTime;
     }
   }
@@ -1807,7 +1825,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void _updateWalkingPatternAnalysis() {
     // Reset consecutive steps if too much time has passed
     if (_lastValidStep != null) {
-      double timeSinceLastStep = DateTime.now().difference(_lastValidStep!).inMilliseconds / 1000.0;
+      double timeSinceLastStep =
+          DateTime.now().difference(_lastValidStep!).inMilliseconds / 1000.0;
       if (timeSinceLastStep > 2.0) {
         _consecutiveSteps = 0;
         _walkingConfidence *= 0.8; // Reduce confidence
@@ -1825,10 +1844,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// Calculate variance of a list of values
   double _calculateVariance(List<double> values) {
     if (values.length < 2) return 0.0;
-    
+
     double mean = values.reduce((a, b) => a + b) / values.length;
-    double variance = values.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) / values.length;
-    
+    double variance =
+        values.map((value) => pow(value - mean, 2)).reduce((a, b) => a + b) /
+        values.length;
+
     return variance;
   }
 
@@ -1841,7 +1862,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
       return;
     }
 
-    final elapsedTime = now.difference(_lastUpdateTime!).inMilliseconds / 1000.0;
+    final elapsedTime =
+        now.difference(_lastUpdateTime!).inMilliseconds / 1000.0;
     _lastUpdateTime = now;
 
     // Skip if time difference is too small or too large
@@ -1856,9 +1878,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
     );
 
     // Use calibrated still detection threshold
-    bool isStill = _isCalibrated 
-        ? (aTotal < _stillThreshold) 
-        : (aTotal - 9.8).abs() < 0.2; // Fallback to default
+    bool isStill =
+        _isCalibrated
+            ? (aTotal < _stillThreshold)
+            : (aTotal - 9.8).abs() < 0.2; // Fallback to default
 
     if (isStill) {
       _stillCounter++;
@@ -1887,20 +1910,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     // Update raw sensor data for debugging
     setState(() {
-      _acceleration = [event.x, event.y, event.z];
-    });
-  }
-
-    // Calculate IMU-based distance from origin
-    double imuDistance = sqrt(_imuX * _imuX + _imuY * _imuY);
-
-    // Update total distance (use larger of pedometer or IMU)
-    double stepBasedDistance = _steps * _stepLength;
-    double totalDistance = max(stepBasedDistance, imuDistance);
-
-    setState(() {
-      _imuDistance = imuDistance;
-      _distance = totalDistance;
       _acceleration = [event.x, event.y, event.z];
     });
   }
@@ -3058,7 +3067,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
               const SizedBox(height: 8),
               ..._detectedBeacons.map(
                 (beacon) => Text(
-                  '${beacon.id}: ${beacon.rssi.toStringAsFixed(1)} dBm, ${beacon.estimateDistance().toStringAsFixed(1)} m',
+                  '${beacon.id}: ${beacon.rssi.toStringAsFixed(1)} dBm, ${beacon.distance.toStringAsFixed(1)} m',
                 ),
               ),
             ],
